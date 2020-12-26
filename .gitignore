@@ -1,5 +1,6 @@
 *.tex
 jl_*
+test.jl
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

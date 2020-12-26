@@ -4,7 +4,6 @@ author: Aaron Kaw
 date: Day 5 - Binary Boarding
 ---
 
-# Part One
 You board your plane only to discover a new problem: you dropped your boarding pass! You aren't sure which seat is yours, and all of the flight attendants are busy with the flood of people that suddenly made it through passport control.
 
 You write a quick program to use your phone's camera to scan all of the nearby boarding passes (your puzzle input); perhaps you can find your seat through process of elimination.
@@ -99,6 +98,7 @@ seats = open("puzzle_input.txt") do file
 end
 ```
 
+# Part One
 As a sanity check, look through your list of boarding passes. **What is the highest seat ID on a boarding pass?**
 
 ```julia

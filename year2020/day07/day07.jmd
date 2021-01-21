@@ -33,14 +33,147 @@ In the above rules, the following options would be available to you:
 
 So, in this example, the number of bag colors that can eventually contain at least one `shiny gold` bag is **`4`**.
 
+```julia, cache = true, results = "hidden"
+struct Bag
+	desc::Symbol
+	colour::Symbol
+	Bag(desc::Symbol, col::Symbol) = new(desc, col)
+end
+
+Bag(desc::AbstractString, col::AbstractString) = Bag(desc |> Symbol, col |> Symbol)
+
+function Bag(bag::AbstractString)
+	@assert [letter == ' ' for letter ∈ bag] |> sum == 1
+	desc_col = split(bag, ' ')
+	@assert desc_col |> length == 2
+	Bag(desc_col[1], desc_col[2])
+end
+
+mutable struct Rule
+	case::Bag
+	contain::Vector{Tuple{Integer, Bag}}
+end
+
+function Rule(rule::AbstractString)
+	rule_split = split(rule, ' ')
+	rule_split |> typeof
+	@assert rule_split[3] == "bags"
+	case = Bag(rule_split[1], rule_split[2])
+	rules = rule_split[5:end]
+	if rules == ["no", "other", "bags."]
+		return Rule(case, [])
+	end
+	Nrules = length(rules) / 4 |> Integer
+	contain = Vector{Tuple{Integer, Bag}}(undef, 0)
+	for n ∈ 1:Nrules
+		int = tryparse(Int, rules[4n - 3])
+		desc = rules[4n - 2]
+		col = rules[4n - 1]
+		@assert rules[4n][1:3] == "bag"
+		push!(
+			contain,
+			(
+				int,
+				Bag(
+					desc, col
+				)
+			)
+		)
+	end
+	return Rule(case, contain)
+end
+
+all_rules = open("puzzle_input.txt") do file
+	[Rule(rule) for rule ∈ eachline(file)]
+end
+```
+
 # Part One
 **How many bag colors can eventually contain at least one `shiny gold` bag?** (The list of rules is quite long; make sure you get all of it.)
 
 ## Solution
 ```julia
-struct Bag
-    adj::String
-    col::String
-    con::Vector{Bag}
+import Base.==
+function ==(one::Bag, two::Bag)
+	if one.desc ≠ two.desc
+		return false
+	elseif one.colour ≠ two.colour
+		return false
+	else
+		return true
+	end
 end
+
+all_bags = Vector{Bag}(undef, 0)
+for rule ∈ all_rules
+	if !any([rule.case == bag for bag ∈ all_bags])
+		push!(all_bags, rule.case)
+	end
+	for rule_bag ∈ [contains[2] for contains ∈ rule.contain]
+		if !any([rule_bag == bag for bag ∈ all_bags])
+			push!(all_bags, rule_bag)
+		end
+	end
+end
+
+all_bag_contains = Vector{Tuple{Bag, Vector{Bag}}}(undef, 0)
+for bag_children ∈ all_bags
+	bag_parents = Vector{Bag}(undef, 0)
+	for rule ∈ all_rules
+		if [
+			rule_cont_bag == bag_children for rule_cont_bag ∈ [
+				quant[2] for quant ∈ rule.contain
+			]
+		] |> any
+			push!(bag_parents, rule.case)
+		end
+	end
+	push!(all_bag_contains, (bag_children, bag_parents))
+end
+
+contains_shiny_gold_bag = [Bag("shiny", "gold")]
+Nbagscontain = 0
+while Nbagscontain ≠ length(contains_shiny_gold_bag)
+	global Nbagscontain = length(contains_shiny_gold_bag)
+	for bag_contains ∈ all_bag_contains
+		if bag_contains[1] ∈ contains_shiny_gold_bag
+			for bag_container ∈ bag_contains[2]
+				if bag_container ∉ contains_shiny_gold_bag
+					push!(contains_shiny_gold_bag, bag_container)
+				end
+			end
+		end
+	end
+end
+(contains_shiny_gold_bag |> length) - 1 |> println
 ```
+
+# Part Two
+It's getting pretty expensive to fly these days - not because of ticket prices, but because of the ridiculous number of bags you need to buy!
+
+Consider again your shiny gold bag and the rules from the above example:
+
+* `faded blue` bags contain `0` other bags.
+* `dotted black` bags contain `0` other bags.
+* `vibrant plum` bags contain `11` other bags: 5 `faded blue` bags and 6 `dotted black` bags.
+* `dark olive` bags contain `7` other bags: 3 `faded blue` bags and 4 `dotted black` bags.
+
+So, a single `shiny gold` bag must contain 1 `dark olive` bag (and the 7 bags within it) plus 2 `vibrant plum` bags (and the 11 bags within **each** of those): `1 + 1*7 + 2 + 2*11` = **`32`** bags!
+
+Of course, the actual rules have a small chance of going several levels deeper than this example; be sure to count all of the bags, even if the nesting becomes topologically impractical!
+
+Here's another example:
+
+```
+shiny gold bags contain 2 dark red bags.
+dark red bags contain 2 dark orange bags.
+dark orange bags contain 2 dark yellow bags.
+dark yellow bags contain 2 dark green bags.
+dark green bags contain 2 dark blue bags.
+dark blue bags contain 2 dark violet bags.
+dark violet bags contain no other bags.
+```
+
+In this example, a single `shiny gold` bag must contain `126` other bags.
+
+**How many individual bags are required inside your single `shiny gold` bag?**
